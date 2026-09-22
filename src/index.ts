@@ -5,6 +5,8 @@ import { errorHandler } from "./lib/errors.js";
 import { currentUser } from "./middleware/currentUser.js";
 import { ingredientsRouter } from "./routes/ingredients.js";
 import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
+import { nutrientTargetsRouter } from "./routes/nutrientTargets.js";
+import { nutritionRouter } from "./routes/nutrition.js";
 import { recipesRouter } from "./routes/recipes.js";
 
 const app = express();
@@ -32,6 +34,8 @@ app.use("/api/ingredients", ingredientsRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/meal-plans", mealPlansRouter);
 app.use("/api/meal-plan-recipes", mealPlanRecipesRouter);
+app.use("/api/nutrient-targets", nutrientTargetsRouter);
+app.use("/api/nutrition", nutritionRouter);
 
 app.use(errorHandler);
 

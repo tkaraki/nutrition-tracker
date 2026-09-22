@@ -7,11 +7,12 @@ You log meals and supplements, the app rolls them into daily and weekly nutrient
 totals, compares those against targets you set, and surfaces the gaps. A coach
 feature then reads your real logged history to make specific recommendations.
 
-> **Status: early.** CRUD is in for ingredients, recipes (with their
-> ingredient lists), and meal planning/logging. There is no auth yet —
-> every request is attributed to a single seeded dev user, clearly
-> marked in code, until the auth step replaces it. Nutrient
-> aggregation, supplements, LLM parsing, and the coach are still ahead.
+> **Status: early.** CRUD is in for ingredients, recipes, and meal
+> planning/logging, plus nutrient-target CRUD and a daily/weekly
+> aggregation view unifying food eaten and supplements logged against
+> those targets. There is no auth yet — every request is attributed to
+> a single seeded dev user, clearly marked in code, until the auth step
+> replaces it. Supplement CRUD, LLM parsing, and the coach are still ahead.
 
 ## Planned features
 
