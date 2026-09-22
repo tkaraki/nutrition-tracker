@@ -8,6 +8,7 @@ import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
 import { nutrientTargetsRouter } from "./routes/nutrientTargets.js";
 import { nutritionRouter } from "./routes/nutrition.js";
 import { recipesRouter } from "./routes/recipes.js";
+import { supplementLogsRouter, supplementsRouter } from "./routes/supplements.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -36,6 +37,8 @@ app.use("/api/meal-plans", mealPlansRouter);
 app.use("/api/meal-plan-recipes", mealPlanRecipesRouter);
 app.use("/api/nutrient-targets", nutrientTargetsRouter);
 app.use("/api/nutrition", nutritionRouter);
+app.use("/api/supplements", supplementsRouter);
+app.use("/api/supplement-logs", supplementLogsRouter);
 
 app.use(errorHandler);
 

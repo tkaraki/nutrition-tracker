@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * The fixed set of nutrient keys tracked throughout the app. Must stay in
  * sync with: the column names in the `ingredients`/`supplements` tables,
@@ -25,3 +27,12 @@ export type NutrientKey = (typeof NUTRIENT_KEYS)[number];
 export function emptyTotals(): Record<NutrientKey, number> {
   return Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, 0])) as Record<NutrientKey, number>;
 }
+
+/**
+ * The eleven per-nutrient columns shared by `ingredients` and `supplements`
+ * — same keys, same default-to-zero behavior — as a zod object shape both
+ * routes' create/update schemas spread in, so the two can't drift apart.
+ */
+export const nutrientFieldsSchema = Object.fromEntries(
+  NUTRIENT_KEYS.map((key) => [key, z.number().nonnegative().default(0)]),
+) as Record<NutrientKey, z.ZodDefault<z.ZodNumber>>;

@@ -3,49 +3,22 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { AppError, asyncHandler } from "../lib/errors.js";
 import { validateBody } from "../lib/validate.js";
+import { NUTRIENT_KEYS, nutrientFieldsSchema } from "../lib/nutrients.js";
 
 export const ingredientsRouter = Router();
-
-const nutrientFields = {
-  calories_kcal: z.number().nonnegative().default(0),
-  protein_g: z.number().nonnegative().default(0),
-  carbs_g: z.number().nonnegative().default(0),
-  fat_g: z.number().nonnegative().default(0),
-  fiber_g: z.number().nonnegative().default(0),
-  sodium_mg: z.number().nonnegative().default(0),
-  potassium_mg: z.number().nonnegative().default(0),
-  calcium_mg: z.number().nonnegative().default(0),
-  iron_mg: z.number().nonnegative().default(0),
-  vitamin_c_mg: z.number().nonnegative().default(0),
-  vitamin_d_mcg: z.number().nonnegative().default(0),
-};
 
 const createIngredientSchema = z.object({
   name: z.string().trim().min(1),
   fdc_id: z.number().int().positive().optional(),
   serving_size_g: z.number().positive().optional(),
   extra_micros_json: z.record(z.string(), z.number()).default({}),
-  ...nutrientFields,
+  ...nutrientFieldsSchema,
 });
 
 // Every field optional for PATCH — partial update semantics.
 const updateIngredientSchema = createIngredientSchema.partial();
 
-const NUTRIENT_COLUMNS = [
-  "calories_kcal",
-  "protein_g",
-  "carbs_g",
-  "fat_g",
-  "fiber_g",
-  "sodium_mg",
-  "potassium_mg",
-  "calcium_mg",
-  "iron_mg",
-  "vitamin_c_mg",
-  "vitamin_d_mcg",
-] as const;
-
-const ALL_COLUMNS = ["name", "fdc_id", "serving_size_g", "extra_micros_json", ...NUTRIENT_COLUMNS] as const;
+const ALL_COLUMNS = ["name", "fdc_id", "serving_size_g", "extra_micros_json", ...NUTRIENT_KEYS] as const;
 
 // GET /api/ingredients?search=chicken&limit=20&offset=0
 ingredientsRouter.get(
