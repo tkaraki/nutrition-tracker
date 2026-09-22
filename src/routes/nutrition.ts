@@ -3,7 +3,7 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { asyncHandler } from "../lib/errors.js";
 import { validateQuery } from "../lib/validate.js";
-import type { RequestWithUser } from "../middleware/currentUser.js";
+import type { RequestWithUser } from "../middleware/requireAuth.js";
 import { emptyTotals, NUTRIENT_KEYS, type NutrientKey } from "../lib/nutrients.js";
 
 export const nutritionRouter = Router();

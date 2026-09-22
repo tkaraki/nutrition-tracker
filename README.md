@@ -7,13 +7,12 @@ You log meals and supplements, the app rolls them into daily and weekly nutrient
 totals, compares those against targets you set, and surfaces the gaps. A coach
 feature then reads your real logged history to make specific recommendations.
 
-> **Status: early.** CRUD is in for ingredients, recipes, meal
-> planning/logging, and supplements (products + dose logs) — the last
-> of these completes the unified nutrient pipeline the daily/weekly
-> aggregation view reads from. There is no auth yet — every request is
-> attributed to a single seeded dev user, clearly marked in code, until
-> the auth step replaces it. LLM recipe parsing and the AI coach are
-> still ahead.
+> **Status: early.** Real multi-user auth (Argon2id password hashing,
+> Postgres-backed sessions) protects a full CRUD + nutrient-aggregation
+> API: ingredients, recipes, meal planning/logging, supplements, and
+> daily/weekly totals vs. personal targets. LLM recipe parsing and the
+> AI coach are still ahead, and there is no frontend yet — everything
+> so far is exercised via the API directly.
 
 ## Planned features
 
@@ -69,6 +68,12 @@ brew services start postgresql@17
 cp .env.example .env                # then fill in DATABASE_URL, SESSION_SECRET, etc.
 npm install
 npm run migrate:up
-npm run seed                        # creates the dev user routes run as, until auth exists
 npm run dev                         # http://localhost:3000/health
+
+# then, to actually use the API:
+curl -X POST http://localhost:3000/api/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"a long passphrase","display_name":"You"}' \
+  -c cookies.txt
+curl http://localhost:3000/api/recipes -b cookies.txt
 ```

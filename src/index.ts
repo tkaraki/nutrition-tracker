@@ -2,7 +2,9 @@ import "dotenv/config";
 import express from "express";
 import { pool } from "./db/pool.js";
 import { errorHandler } from "./lib/errors.js";
-import { currentUser } from "./middleware/currentUser.js";
+import { sessionMiddleware } from "./lib/session.js";
+import { requireAuth } from "./middleware/requireAuth.js";
+import { authRouter } from "./routes/auth.js";
 import { ingredientsRouter } from "./routes/ingredients.js";
 import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
 import { nutrientTargetsRouter } from "./routes/nutrientTargets.js";
@@ -13,7 +15,16 @@ import { supplementLogsRouter, supplementsRouter } from "./routes/supplements.js
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
+// Tailscale Funnel will terminate TLS and forward to this app on the same
+// machine, so its X-Forwarded-* headers can be trusted — but only in
+// production, where that proxy actually exists. Affects secure cookies and
+// req.ip (used by the auth rate limiter).
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(express.json());
+app.use(sessionMiddleware);
 
 // Liveness check, and a real round-trip to Postgres so a broken DB
 // connection surfaces immediately instead of on the first real request.
@@ -27,9 +38,12 @@ app.get("/health", async (_req, res) => {
   }
 });
 
-// TEMPORARY: attributes every request below to the seeded dev user.
-// Replaced by real session auth in a later step — see currentUser.ts.
-app.use("/api", currentUser);
+// Public: register/login/logout/me. Mounted before the requireAuth gate
+// below, since none of them can require a session that doesn't exist yet.
+app.use("/api/auth", authRouter);
+
+// Everything else requires a real, logged-in session.
+app.use("/api", requireAuth);
 
 app.use("/api/ingredients", ingredientsRouter);
 app.use("/api/recipes", recipesRouter);
