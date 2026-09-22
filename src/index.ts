@@ -1,6 +1,11 @@
 import "dotenv/config";
 import express from "express";
 import { pool } from "./db/pool.js";
+import { errorHandler } from "./lib/errors.js";
+import { currentUser } from "./middleware/currentUser.js";
+import { ingredientsRouter } from "./routes/ingredients.js";
+import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
+import { recipesRouter } from "./routes/recipes.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -18,6 +23,17 @@ app.get("/health", async (_req, res) => {
     res.status(503).json({ status: "error", message: "database unreachable" });
   }
 });
+
+// TEMPORARY: attributes every request below to the seeded dev user.
+// Replaced by real session auth in a later step — see currentUser.ts.
+app.use("/api", currentUser);
+
+app.use("/api/ingredients", ingredientsRouter);
+app.use("/api/recipes", recipesRouter);
+app.use("/api/meal-plans", mealPlansRouter);
+app.use("/api/meal-plan-recipes", mealPlanRecipesRouter);
+
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`nutrition-tracker listening on http://localhost:${port}`);

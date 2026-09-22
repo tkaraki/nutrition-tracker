@@ -7,10 +7,11 @@ You log meals and supplements, the app rolls them into daily and weekly nutrient
 totals, compares those against targets you set, and surfaces the gaps. A coach
 feature then reads your real logged history to make specific recommendations.
 
-> **Status: early.** The core schema (users, ingredients, recipes, meal
-> planning, supplements) is migrated and a health-check endpoint runs
-> against a real database. No app functionality yet — CRUD, auth, LLM
-> parsing, and the coach are all still ahead.
+> **Status: early.** CRUD is in for ingredients, recipes (with their
+> ingredient lists), and meal planning/logging. There is no auth yet —
+> every request is attributed to a single seeded dev user, clearly
+> marked in code, until the auth step replaces it. Nutrient
+> aggregation, supplements, LLM parsing, and the coach are still ahead.
 
 ## Planned features
 
@@ -66,5 +67,6 @@ brew services start postgresql@17
 cp .env.example .env                # then fill in DATABASE_URL, SESSION_SECRET, etc.
 npm install
 npm run migrate:up
+npm run seed                        # creates the dev user routes run as, until auth exists
 npm run dev                         # http://localhost:3000/health
 ```

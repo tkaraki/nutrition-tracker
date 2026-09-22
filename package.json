@@ -15,12 +15,14 @@
     "typecheck": "tsc --noEmit",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create --migration-file-language sql"
+    "migrate:create": "node-pg-migrate create --migration-file-language sql",
+    "seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
     "dotenv": "^18.0.2",
     "express": "^5.2.1",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
