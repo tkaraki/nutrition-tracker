@@ -1,0 +1,17 @@
+# Normalize all text to LF in the repository.
+# Without this, git on Windows can rewrite line endings on checkout, which
+# corrupts shell scripts and produces diffs where nothing actually changed.
+* text=auto eol=lf
+
+# Files that must stay LF even on Windows checkouts.
+*.sh    text eol=lf
+*.sql   text eol=lf
+
+# Files Windows tooling expects as CRLF.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# Binary — never touch.
+*.png   binary
+*.jpg   binary
+*.pdf   binary

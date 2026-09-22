@@ -7,8 +7,10 @@ You log meals and supplements, the app rolls them into daily and weekly nutrient
 totals, compares those against targets you set, and surfaces the gaps. A coach
 feature then reads your real logged history to make specific recommendations.
 
-> **Status: early.** The schema and scaffolding are being built. Nothing here is
-> usable yet.
+> **Status: early.** The core schema (users, ingredients, recipes, meal
+> planning, supplements) is migrated and a health-check endpoint runs
+> against a real database. No app functionality yet — CRUD, auth, LLM
+> parsing, and the coach are all still ahead.
 
 ## Planned features
 
@@ -54,3 +56,15 @@ negotiable:
 ## License
 
 [MIT](LICENSE)
+
+## Local development
+
+```bash
+brew install postgresql@17          # once
+brew services start postgresql@17
+
+cp .env.example .env                # then fill in DATABASE_URL, SESSION_SECRET, etc.
+npm install
+npm run migrate:up
+npm run dev                         # http://localhost:3000/health
+```
