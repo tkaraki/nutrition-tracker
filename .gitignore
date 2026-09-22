@@ -1,0 +1,41 @@
+# ---- Secrets -------------------------------------------------------------
+# This repo is PUBLIC. Anything matching these patterns must never be staged.
+.env
+.env.*
+!.env.example
+
+# ---- Dependencies --------------------------------------------------------
+node_modules/
+.npm/
+.pnpm-store/
+
+# ---- Build output --------------------------------------------------------
+dist/
+build/
+*.tsbuildinfo
+
+# ---- Test / coverage -----------------------------------------------------
+coverage/
+.nyc_output/
+
+# ---- Logs & process managers ---------------------------------------------
+*.log
+npm-debug.log*
+logs/
+.pm2/
+
+# ---- Local data ----------------------------------------------------------
+# Real nutrition/health logs and any local database dumps stay out of git.
+# Committed fixtures must be synthetic — see README.
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+/data/
+/uploads/
+
+# ---- Editor / OS ---------------------------------------------------------
+.DS_Store
+.vscode/
+.idea/
+*.swp
