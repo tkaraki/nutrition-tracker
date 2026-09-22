@@ -4,6 +4,7 @@ import { pool } from "./db/pool.js";
 import { errorHandler } from "./lib/errors.js";
 import { sessionMiddleware } from "./lib/session.js";
 import { requireAuth } from "./middleware/requireAuth.js";
+import { serveClient } from "./middleware/serveClient.js";
 import { authRouter } from "./routes/auth.js";
 import { coachRouter } from "./routes/coach.js";
 import { ingredientsRouter } from "./routes/ingredients.js";
@@ -57,6 +58,10 @@ app.use("/api/supplements", supplementsRouter);
 app.use("/api/supplement-logs", supplementLogsRouter);
 app.use("/api/recipe-imports", recipeImportsRouter);
 app.use("/api/coach", coachRouter);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(...serveClient());
+}
 
 app.use(errorHandler);
 
