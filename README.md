@@ -10,9 +10,11 @@ feature then reads your real logged history to make specific recommendations.
 > **Status: early.** Real multi-user auth (Argon2id password hashing,
 > Postgres-backed sessions) protects a full CRUD + nutrient-aggregation
 > API: ingredients, recipes, meal planning/logging, supplements, and
-> daily/weekly totals vs. personal targets. LLM recipe parsing and the
-> AI coach are still ahead, and there is no frontend yet — everything
-> so far is exercised via the API directly.
+> daily/weekly totals vs. personal targets. LLM recipe parsing (text or
+> URL, matched against existing ingredients) and the AI coach (grounded
+> in a user's own logged history and targets) have both shipped. There
+> is no frontend yet — everything so far is exercised via the API
+> directly.
 
 ## Planned features
 
@@ -76,4 +78,8 @@ curl -X POST http://localhost:3000/api/auth/register \
   -d '{"email":"you@example.com","password":"a long passphrase","display_name":"You"}' \
   -c cookies.txt
 curl http://localhost:3000/api/recipes -b cookies.txt
+curl -X POST http://localhost:3000/api/coach/advice \
+  -H 'Content-Type: application/json' \
+  -d '{"days":7}' \
+  -b cookies.txt
 ```

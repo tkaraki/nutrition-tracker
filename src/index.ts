@@ -5,6 +5,7 @@ import { errorHandler } from "./lib/errors.js";
 import { sessionMiddleware } from "./lib/session.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
+import { coachRouter } from "./routes/coach.js";
 import { ingredientsRouter } from "./routes/ingredients.js";
 import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
 import { nutrientTargetsRouter } from "./routes/nutrientTargets.js";
@@ -55,6 +56,7 @@ app.use("/api/nutrition", nutritionRouter);
 app.use("/api/supplements", supplementsRouter);
 app.use("/api/supplement-logs", supplementLogsRouter);
 app.use("/api/recipe-imports", recipeImportsRouter);
+app.use("/api/coach", coachRouter);
 
 app.use(errorHandler);
 

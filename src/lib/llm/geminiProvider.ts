@@ -1,11 +1,15 @@
+import type { CoachContext } from "../coachContext.js";
+import { buildCoachPrompt } from "./coachPrompt.js";
+import { coachAdviceSchema, type CoachAdvice } from "./coachSchema.js";
 import { buildFullExtractionPrompt, buildIngredientLinesPrompt } from "./prompt.js";
-import type { RecipeExtractor } from "./provider.js";
+import type { CoachAdvisor, RecipeExtractor } from "./provider.js";
 import { extractedIngredientSchema, extractedRecipeSchema, type ExtractedIngredient, type ExtractedRecipe } from "./schema.js";
+import { generateJsonGemini } from "./transport.js";
 import { z } from "zod";
 
 const ingredientListSchema = z.array(extractedIngredientSchema);
 
-export class GeminiProvider implements RecipeExtractor {
+export class GeminiProvider implements RecipeExtractor, CoachAdvisor {
   private readonly apiKey: string;
   private readonly model: string;
 
@@ -26,52 +30,21 @@ export class GeminiProvider implements RecipeExtractor {
   }
 
   async extractRecipe(rawText: string): Promise<ExtractedRecipe> {
-    const json = await this.generateJson(buildFullExtractionPrompt(rawText));
+    const json = await generateJsonGemini({ apiKey: this.apiKey, model: this.model }, buildFullExtractionPrompt(rawText));
     return extractedRecipeSchema.parse(json);
   }
 
   async parseIngredientLines(lines: string[]): Promise<ExtractedIngredient[]> {
-    const json = await this.generateJson(buildIngredientLinesPrompt(lines));
+    const json = await generateJsonGemini({ apiKey: this.apiKey, model: this.model }, buildIngredientLinesPrompt(lines));
     return ingredientListSchema.parse(json);
   }
 
-  private async generateJson(prompt: string): Promise<unknown> {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: 0.1, // extraction, not creative writing — keep it literal
-          // Literal field-splitting needs no reasoning, and thinking tokens
-          // push this well past the timeout below on models that think by
-          // default (e.g. gemini-3.6-flash, unlike its 2.5 predecessor).
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-
-    if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Gemini API error (${response.status}): ${detail.slice(0, 500)}`);
-    }
-
-    const data = (await response.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (typeof text !== "string") {
-      throw new Error("Gemini response had no text content — check the API response shape hasn't changed.");
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new Error(`Gemini did not return valid JSON: ${text.slice(0, 200)}`);
-    }
+  async generateAdvice(context: CoachContext): Promise<CoachAdvice> {
+    const json = await generateJsonGemini(
+      { apiKey: this.apiKey, model: this.model },
+      buildCoachPrompt(context),
+      { temperature: 0.3 },
+    );
+    return coachAdviceSchema.parse(json);
   }
 }

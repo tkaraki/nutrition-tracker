@@ -6,6 +6,7 @@ import { fetchRecipeFromUrl } from "../lib/llm/fetchRecipePage.js";
 import { getRecipeExtractor } from "../lib/llm/index.js";
 import type { ExtractedIngredient } from "../lib/llm/schema.js";
 import { validateBody } from "../lib/validate.js";
+import { llmDailyLimiter, llmMinuteLimiter } from "../middleware/llmRateLimit.js";
 
 export const recipeImportsRouter = Router();
 
@@ -55,6 +56,8 @@ async function withMatches(ingredients: ExtractedIngredient[]): Promise<DraftIng
 // density wrong would silently corrupt nutrition data.
 recipeImportsRouter.post(
   "/",
+  llmMinuteLimiter,
+  llmDailyLimiter,
   validateBody(importSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof importSchema>;
