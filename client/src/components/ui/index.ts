@@ -1,7 +1,14 @@
 export { Badge } from "./Badge";
 export { Button } from "./Button";
 export { Card } from "./Card";
+export { Combobox } from "./Combobox";
+export type { ComboboxProps } from "./Combobox";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { EmptyState } from "./EmptyState";
 export { Field } from "./Field";
 export { ProgressBar } from "./ProgressBar";
 export { Spinner } from "./Spinner";
+export { Tabs, TabPanel } from "./Tabs";
+export type { TabItem } from "./Tabs";
+export { Textarea } from "./Textarea";
+export { WeekdayToggle } from "./WeekdayToggle";

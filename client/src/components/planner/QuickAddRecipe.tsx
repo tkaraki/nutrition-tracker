@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Button, Field } from "../ui";
+import { Button, Combobox, Field } from "../ui";
 import { useIngredients } from "../../hooks/useIngredients";
 import { useCreateRecipe } from "../../hooks/useRecipes";
 import { QuickAddIngredient } from "./QuickAddIngredient";
@@ -124,14 +124,12 @@ interface IngredientLineRowProps {
 }
 
 function IngredientLineRow({ value, onChange, onRemove, removable }: IngredientLineRowProps) {
-  const [search, setSearch] = useState(value.ingredientName);
-  const [showResults, setShowResults] = useState(false);
+  const [query, setQuery] = useState("");
   const [showCreateNew, setShowCreateNew] = useState(false);
-  const { data: results, isPending } = useIngredients(search.trim() || undefined);
+  const { data: results, isPending, isError } = useIngredients(query || undefined);
 
   function selectIngredient(ingredient: Ingredient) {
-    setSearch(ingredient.name);
-    setShowResults(false);
+    setShowCreateNew(false);
     onChange({ ...value, ingredientId: ingredient.id, ingredientName: ingredient.name });
   }
 
@@ -143,56 +141,23 @@ function IngredientLineRow({ value, onChange, onRemove, removable }: IngredientL
   return (
     <div className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
       <div className="flex items-start gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Field
+        <div className="min-w-0 flex-1">
+          <Combobox
             label="Ingredient"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setShowResults(true);
-              if (value.ingredientId !== null) {
-                onChange({ ...value, ingredientId: null, ingredientName: "" });
-              }
-            }}
-            onFocus={() => setShowResults(true)}
             placeholder="Search ingredients..."
-            autoComplete="off"
+            value={value.ingredientName}
+            onSearch={setQuery}
+            onSelect={selectIngredient}
+            onClear={() => onChange({ ...value, ingredientId: null, ingredientName: "" })}
+            items={results ?? []}
+            isLoading={isPending}
+            isError={isError}
+            getKey={(ingredient) => ingredient.id}
+            getLabel={(ingredient) => ingredient.name}
+            isSelected={value.ingredientId !== null}
+            onCreateNew={() => setShowCreateNew(true)}
+            createNewLabel={() => "+ Create new ingredient"}
           />
-          {showResults && (
-            <div className="relative z-10 mt-1 max-h-48 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] shadow-[var(--shadow-sm)]">
-              {isPending && (
-                <p className="px-3 py-2 text-[length:var(--text-caption)] text-[var(--color-text-subtle)]">
-                  Searching...
-                </p>
-              )}
-              {!isPending && results && results.length === 0 && (
-                <p className="px-3 py-2 text-[length:var(--text-caption)] text-[var(--color-text-subtle)]">
-                  No matches.
-                </p>
-              )}
-              {!isPending &&
-                results?.map((ingredient) => (
-                  <button
-                    key={ingredient.id}
-                    type="button"
-                    onClick={() => selectIngredient(ingredient)}
-                    className="block w-full px-3 py-2 text-left text-[length:var(--text-body-sm)] hover:bg-[var(--color-surface-alt)]"
-                  >
-                    {ingredient.name}
-                  </button>
-                ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowResults(false);
-                  setShowCreateNew(true);
-                }}
-                className="block w-full border-t border-[var(--color-border)] px-3 py-2 text-left text-[length:var(--text-caption)] font-medium text-[var(--color-primary)]"
-              >
-                Can't find it? Create new ingredient
-              </button>
-            </div>
-          )}
         </div>
         <Field
           label="Grams"
@@ -215,10 +180,6 @@ function IngredientLineRow({ value, onChange, onRemove, removable }: IngredientL
           </Button>
         )}
       </div>
-
-      {value.ingredientId !== null && (
-        <p className="mt-1 text-[length:var(--text-caption)] text-[var(--color-success)]">Selected: {value.ingredientName}</p>
-      )}
 
       {showCreateNew && (
         <div className="mt-2">

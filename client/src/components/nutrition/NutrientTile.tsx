@@ -1,8 +1,9 @@
 import { CircleSlash, TriangleAlert, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Card, ProgressBar } from "../ui";
 import { NUTRIENT_DISPLAY, type NutrientKey } from "../../lib/nutrients";
-import { formatAmount } from "./formatAmount";
+import { formatAmount, formatWithUnit } from "./formatAmount";
 
 interface NutrientTileProps {
   nutrientKey: NutrientKey;
@@ -58,36 +59,39 @@ export function NutrientTile({ nutrientKey, consumed, target, compact = false }:
     const remaining = Math.max(target! - consumed, 0);
     caption = (
       <span className="text-[var(--color-text-subtle)]">
-        {formatAmount(remaining)}{meta.unit} remaining
+        {formatWithUnit(remaining, meta.unit)} remaining
       </span>
     );
-    ariaLabel = `${meta.label}, ${formatAmount(consumed)} of ${formatAmount(target!)} ${meta.unit}, ${formatAmount(remaining)} ${meta.unit} remaining`;
+    ariaLabel = `${meta.label}, ${formatAmount(consumed, meta.unit)} of ${formatAmount(target!, meta.unit)} ${meta.unit}, ${formatAmount(remaining, meta.unit)} ${meta.unit} remaining`;
   } else if (state === "near-limit") {
     const over = consumed - target!;
     caption = (
       <span className="inline-flex items-center gap-1 text-[var(--color-warning)]">
         <TriangleAlert size={14} aria-hidden="true" />
-        {formatAmount(over)}{meta.unit} over target
+        {formatWithUnit(over, meta.unit)} over target
       </span>
     );
-    ariaLabel = `${meta.label}, ${formatAmount(consumed)} of ${formatAmount(target!)} ${meta.unit}, ${formatAmount(over)} ${meta.unit} over target`;
+    ariaLabel = `${meta.label}, ${formatAmount(consumed, meta.unit)} of ${formatAmount(target!, meta.unit)} ${meta.unit}, ${formatAmount(over, meta.unit)} ${meta.unit} over target`;
   } else if (state === "over-limit") {
     const over = consumed - target!;
     caption = (
       <span className="inline-flex items-center gap-1 text-[var(--color-error)]">
         <XCircle size={14} fill="var(--color-error)" color="white" aria-hidden="true" />
-        {formatAmount(over)}{meta.unit} over target
+        {formatWithUnit(over, meta.unit)} over target
       </span>
     );
-    ariaLabel = `${meta.label}, ${formatAmount(consumed)} of ${formatAmount(target!)} ${meta.unit}, ${formatAmount(over)} ${meta.unit} over target`;
+    ariaLabel = `${meta.label}, ${formatAmount(consumed, meta.unit)} of ${formatAmount(target!, meta.unit)} ${meta.unit}, ${formatAmount(over, meta.unit)} ${meta.unit} over target`;
   } else {
     caption = (
-      <span className="inline-flex items-center gap-1 text-[var(--color-text-subtle)]">
+      <Link
+        to="/targets"
+        className="inline-flex items-center gap-1 text-[var(--color-text-subtle)] underline hover:text-[var(--color-text)]"
+      >
         <CircleSlash size={14} aria-hidden="true" />
         No target set
-      </span>
+      </Link>
     );
-    ariaLabel = `${meta.label}, ${formatAmount(consumed)} ${meta.unit}, no target set`;
+    ariaLabel = `${meta.label}, ${formatAmount(consumed, meta.unit)} ${meta.unit}, no target set`;
   }
 
   const accentColor = accentBorderColor[state];
@@ -106,11 +110,11 @@ export function NutrientTile({ nutrientKey, consumed, target, compact = false }:
             compact ? "text-[length:var(--text-heading)]" : "text-[length:var(--text-display-sm)]"
           }`}
         >
-          {formatAmount(consumed)}
+          {formatAmount(consumed, meta.unit)}
         </span>
         {hasTarget && (
-          <span className="ml-1 text-[length:var(--text-body-sm)] font-normal text-[var(--color-text-subtle)]">
-            / {formatAmount(target!)} {meta.unit}
+          <span className="ml-1 inline-block whitespace-nowrap text-[length:var(--text-body-sm)] font-normal text-[var(--color-text-subtle)]">
+            / {formatAmount(target!, meta.unit)} {meta.unit}
           </span>
         )}
       </p>

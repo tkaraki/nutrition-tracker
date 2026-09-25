@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  addIngredientToPlan,
   addRecipeToPlan,
   deleteMealPlan,
   listMealPlans,
+  removeIngredientFromPlan,
   removeRecipeFromPlan,
+  setIngredientEaten,
   setRecipeEaten,
+  updateMealPlanIngredient,
   updateMealPlanRecipe,
   upsertMealPlan,
 } from "../api/mealPlans";
@@ -95,6 +99,49 @@ export function useRemoveRecipeFromPlan() {
   const invalidate = useInvalidatePlanAndNutrition();
   return useMutation({
     mutationFn: (id: number) => removeRecipeFromPlan(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAddIngredientToPlan() {
+  const invalidate = useInvalidatePlanAndNutrition();
+  return useMutation({
+    mutationFn: ({
+      mealPlanId,
+      ingredientId,
+      quantityG,
+      eaten,
+    }: {
+      mealPlanId: number;
+      ingredientId: number;
+      quantityG: number;
+      eaten?: boolean;
+    }) => addIngredientToPlan(mealPlanId, ingredientId, quantityG, eaten),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSetIngredientEaten() {
+  const invalidate = useInvalidatePlanAndNutrition();
+  return useMutation({
+    mutationFn: ({ id, eaten }: { id: number; eaten: boolean }) => setIngredientEaten(id, eaten),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateMealPlanIngredient() {
+  const invalidate = useInvalidatePlanAndNutrition();
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: number; updates: { quantity_g?: number; eaten?: boolean } }) =>
+      updateMealPlanIngredient(id, updates),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveIngredientFromPlan() {
+  const invalidate = useInvalidatePlanAndNutrition();
+  return useMutation({
+    mutationFn: (id: number) => removeIngredientFromPlan(id),
     onSuccess: invalidate,
   });
 }

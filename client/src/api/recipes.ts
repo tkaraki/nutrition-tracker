@@ -31,6 +31,19 @@ interface RawRecipe {
   updated_at: string;
 }
 
+/** `SELECT *` on the recipes table also returns archived_at — only the
+ *  list/restore endpoints below (Library's own needs) surface it; the
+ *  plain `Recipe` type other call sites (e.g. Planner) use stays as-is. */
+interface RawRecipeWithArchived extends RawRecipe {
+  archived_at: string | null;
+}
+
+/** `Recipe` + archive state. Structurally a `Recipe`, so it's a drop-in
+ *  wherever plain `Recipe` is expected (e.g. Planner's RecipePicker). */
+export interface RecipeWithArchived extends Recipe {
+  archived_at: string | null;
+}
+
 function toRecipe(raw: RawRecipe): Recipe {
   return {
     id: Number(raw.id),
@@ -42,6 +55,10 @@ function toRecipe(raw: RawRecipe): Recipe {
     created_at: raw.created_at,
     updated_at: raw.updated_at,
   };
+}
+
+function toRecipeWithArchived(raw: RawRecipeWithArchived): RecipeWithArchived {
+  return { ...toRecipe(raw), archived_at: raw.archived_at };
 }
 
 interface RawRecipeIngredientDetail {
@@ -81,9 +98,12 @@ function toRecipeDetail(raw: RawRecipeDetail): RecipeDetail {
   };
 }
 
-/** GET /api/recipes — no search/filter support server-side; returns the full list. */
-export function listRecipes(): Promise<Recipe[]> {
-  return apiFetch<RawRecipe[]>("/api/recipes").then((rows) => rows.map(toRecipe));
+/** GET /api/recipes[?include_archived=true] — no search/filter support
+ *  server-side; returns the full list. Excludes archived recipes unless
+ *  `includeArchived` is set (Library's "Show archived" toggle). */
+export function listRecipes(includeArchived = false): Promise<RecipeWithArchived[]> {
+  const qs = includeArchived ? "?include_archived=true" : "";
+  return apiFetch<RawRecipeWithArchived[]>(`/api/recipes${qs}`).then((rows) => rows.map(toRecipeWithArchived));
 }
 
 /** GET /api/recipes/:id — detail, with ingredients (5 joined nutrient columns only). */
@@ -120,7 +140,27 @@ export function replaceRecipeIngredients(
   });
 }
 
-/** DELETE /api/recipes/:id */
-export function deleteRecipe(id: number): Promise<void> {
-  return apiFetch<void>(`/api/recipes/${id}`, { method: "DELETE" });
+export interface DeleteRecipeResult {
+  /** true when the recipe was archived instead of hard-deleted, because it's
+   *  still referenced by meal-plan history (204 vs 200 {archived:true}). */
+  archived: boolean;
+}
+
+/** DELETE /api/recipes/:id — hard-deletes (204) unless the recipe is
+ *  referenced by a logged/planned meal, in which case the backend archives
+ *  it instead (200 {archived:true}) rather than surfacing a raw 409. */
+export function deleteRecipe(id: number): Promise<DeleteRecipeResult> {
+  return apiFetch<{ archived: true } | undefined>(`/api/recipes/${id}`, { method: "DELETE" }).then((body) => ({
+    archived: body?.archived === true,
+  }));
+}
+
+/** PATCH /api/recipes/:id {archived} — restore (false) or re-archive (true).
+ *  Separate from updateRecipe() since `archived` maps to archived_at, not a
+ *  plain column in UpdateRecipeInput's shape. */
+export function setRecipeArchived(id: number, archived: boolean): Promise<RecipeWithArchived> {
+  return apiFetch<RawRecipeWithArchived>(`/api/recipes/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ archived }),
+  }).then(toRecipeWithArchived);
 }

@@ -1,32 +1,25 @@
 import { CircleAlert } from "lucide-react";
 import { useId } from "react";
-import type { InputHTMLAttributes } from "react";
+import type { TextareaHTMLAttributes } from "react";
 
-interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
+interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
   error?: string;
   hint?: string;
 }
 
-export function Field({
+export function Textarea({
   label,
   error,
   hint,
   id,
   className = "",
   disabled,
-  type,
-  step,
+  rows = 5,
   ...props
-}: FieldProps) {
+}: TextareaProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
-  // Native <input type="number"> defaults to step="1", which rejects decimal
-  // values (e.g. "3.6") with a blocking browser validation error unless the
-  // caller opts out. Nutrient amounts, grams, and doses are routinely
-  // fractional, so default to step="any" here rather than requiring every
-  // call site to remember it individually.
-  const numberStep = type === "number" ? (step ?? "any") : step;
 
   return (
     <div className={disabled ? "opacity-60 cursor-not-allowed" : ""}>
@@ -36,12 +29,11 @@ export function Field({
       >
         {label}
       </label>
-      <input
+      <textarea
         id={inputId}
         disabled={disabled}
-        type={type}
-        step={numberStep}
-        className={`min-h-11 w-full bg-[var(--color-surface-alt)] border rounded-[var(--radius-sm)] px-3 py-2 text-[length:var(--text-body-sm)] transition-[border-color,box-shadow] duration-150 focus:outline-none disabled:cursor-not-allowed ${
+        rows={rows}
+        className={`w-full min-h-24 resize-y bg-[var(--color-surface-alt)] border rounded-[var(--radius-sm)] px-3 py-2 text-[length:var(--text-body-sm)] transition-[border-color,box-shadow] duration-150 focus:outline-none disabled:cursor-not-allowed ${
           error
             ? "border-[var(--color-error)]"
             : "border-[var(--color-border-strong)] focus:border-[var(--color-primary)] focus:shadow-[0_0_0_3px_var(--color-primary-wash)]"

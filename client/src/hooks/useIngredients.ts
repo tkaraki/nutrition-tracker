@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createIngredient, deleteIngredient, getIngredient, listIngredients, updateIngredient } from "../api/ingredients";
 import type { CreateIngredientInput } from "../api/types";
 
@@ -14,6 +14,22 @@ export function useIngredient(id: number | undefined) {
     queryKey: ["ingredients", "detail", id],
     queryFn: () => getIngredient(id!),
     enabled: id !== undefined,
+  });
+}
+
+/** Parallel per-id detail fetches, sharing the same cache entries as
+ *  `useIngredient`. Used by Library's recipe detail view to compute a full
+ *  11-nutrient per-serving breakdown client-side, since GET /api/recipes/:id
+ *  only joins 5 of 11 nutrient columns per ingredient line (architecture doc
+ *  D flags widening that endpoint as the cheaper fix; until that lands this
+ *  mirrors RecipeRow's existing per-recipe extra-fetch pattern, one level
+ *  down at the ingredient). */
+export function useIngredientsByIds(ids: number[]) {
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: ["ingredients", "detail", id],
+      queryFn: () => getIngredient(id),
+    })),
   });
 }
 

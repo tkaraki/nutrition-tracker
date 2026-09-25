@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Utensils } from "lucide-react";
 import { Button, Card, EmptyState } from "../components/ui";
 import { DayStrip } from "../components/nutrition/DayStrip";
 import { NutrientTile } from "../components/nutrition/NutrientTile";
-import { formatAmount } from "../components/nutrition/formatAmount";
+import { formatWithUnit } from "../components/nutrition/formatAmount";
 import { useDailyNutrition } from "../hooks/useNutrition";
 import { NUTRIENT_DISPLAY, NUTRIENT_KEYS, type NutrientKey } from "../lib/nutrients";
 import { addDays, formatDisplayDate, localToday } from "../lib/dates";
@@ -22,7 +22,7 @@ function secondarySummaryLine(totals: NutrientTotals): string {
   const [first, second, ...rest] = SECONDARY_KEYS;
   if (!first) return "";
   const format = (key: NutrientKey) =>
-    `${NUTRIENT_DISPLAY[key].label} ${formatAmount(totals[key] ?? 0)}${NUTRIENT_DISPLAY[key].unit}`;
+    `${NUTRIENT_DISPLAY[key].label} ${formatWithUnit(totals[key] ?? 0, NUTRIENT_DISPLAY[key].unit)}`;
   const shown = [format(first)];
   if (second) shown.push(format(second));
   const line = shown.join(" · ");
@@ -153,9 +153,17 @@ export function DashboardRoute() {
             title="You haven't logged anything yet"
             description="Plan a meal and mark it eaten to start tracking your nutrition."
             action={
-              <Link to="/plan">
-                <Button variant="primary">Go to planner</Button>
-              </Link>
+              <div className="flex flex-col items-center gap-2">
+                <Link to="/plan">
+                  <Button variant="primary">Go to planner</Button>
+                </Link>
+                <Link
+                  to="/targets"
+                  className="text-[length:var(--text-caption)] font-medium text-[var(--color-primary)] hover:underline"
+                >
+                  or set your daily targets →
+                </Link>
+              </div>
             }
           />
         </Card>

@@ -70,6 +70,22 @@ export interface MealPlanRecipe {
   title?: string;
 }
 
+/** An ingredient logged directly to a meal plan slot, without a recipe in
+ *  between — the shape nested in GET /api/meal-plans, and returned directly
+ *  by POST /:id/ingredients and PATCH /api/meal-plan-ingredients/:id.
+ *  Nutrient fields are already scaled for `quantity_g` (i.e. per-row
+ *  amounts, not the ingredient's raw per-100g values) so the row can show
+ *  kcal without a second lookup. */
+export interface MealPlanIngredient extends NutrientTotals {
+  id: number;
+  meal_plan_id: number;
+  ingredient_id: number;
+  quantity_g: number;
+  /** null while planned-but-not-eaten; an ISO timestamp once marked eaten. */
+  eaten_at: string | null;
+  name: string;
+}
+
 export interface MealPlan {
   id: number;
   user_id: number;
@@ -77,6 +93,7 @@ export interface MealPlan {
   meal_type: MealType;
   created_at: string;
   recipes: MealPlanRecipe[];
+  ingredients: MealPlanIngredient[];
 }
 
 // ---------------------------------------------------------------------

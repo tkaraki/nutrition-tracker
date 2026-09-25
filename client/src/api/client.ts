@@ -1,10 +1,15 @@
 export class ApiError extends Error {
   status: number;
   details?: unknown;
-  constructor(status: number, message: string, details?: unknown) {
+  /** Stable machine-readable code, when the backend sends one (e.g.
+   *  "llm_quota_exhausted") — for branching that shouldn't depend on
+   *  matching the human-readable message text. */
+  code?: string;
+  constructor(status: number, message: string, details?: unknown, code?: string) {
     super(message);
     this.status = status;
     this.details = details;
+    this.code = code;
   }
 }
 
@@ -21,7 +26,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
       body && typeof body === "object" && "error" in body && typeof body.error === "string"
         ? body.error
         : `Request failed (${res.status})`;
-    throw new ApiError(res.status, message, body && typeof body === "object" ? (body as { details?: unknown }).details : undefined);
+    const code =
+      body && typeof body === "object" && "code" in body && typeof body.code === "string" ? body.code : undefined;
+    throw new ApiError(
+      res.status,
+      message,
+      body && typeof body === "object" ? (body as { details?: unknown }).details : undefined,
+      code,
+    );
   }
   return body as T;
 }

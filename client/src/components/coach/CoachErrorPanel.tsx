@@ -8,11 +8,12 @@ interface CoachErrorPanelProps {
 }
 
 /**
- * Renders one of the 5 distinct backend failure modes (src/routes/coach.ts,
- * src/middleware/llmRateLimit.ts), matched on error.status + a substring of
- * the real backend message text (see api/coach.ts's doc comment for the
- * exact strings). Falls back to a generic panel for anything unrecognized
- * (e.g. a network failure that never reached the backend).
+ * Renders one of the 6 distinct backend failure modes (src/routes/coach.ts,
+ * src/middleware/llmRateLimit.ts, src/lib/llm/errors.ts), matched on
+ * error.status + either a stable error.code or a substring of the real
+ * backend message text (see api/coach.ts's doc comment for the exact
+ * strings). Falls back to a generic panel for anything unrecognized (e.g. a
+ * network failure that never reached the backend).
  */
 export function CoachErrorPanel({ error }: CoachErrorPanelProps) {
   if (!(error instanceof ApiError)) {
@@ -25,14 +26,22 @@ export function CoachErrorPanel({ error }: CoachErrorPanelProps) {
     );
   }
 
-  // 422 — no targets set. Reframed: the raw message points at an API
-  // endpoint with no UI in this app version, so no CTA pretends to fix it.
+  // 422 — no targets set. This now has a real in-app fix (/targets), same
+  // shape as the "no logs" case below.
   if (error.status === 422 && error.message.includes("No nutrient targets set")) {
     return (
       <EmptyState
         icon={<Target size={40} aria-hidden="true" />}
         title="No targets set yet"
-        description="The coach compares your intake against targets, and you don't have any set yet. Target-editing isn't available in the app yet — targets currently have to be set directly via the API."
+        description="The coach compares your intake against targets, and you don't have any set yet."
+        action={
+          <Link
+            to="/targets"
+            className="text-[length:var(--text-body-sm)] font-medium text-[var(--color-primary)] hover:underline"
+          >
+            Set your targets →
+          </Link>
+        }
       />
     );
   }
@@ -74,6 +83,20 @@ export function CoachErrorPanel({ error }: CoachErrorPanelProps) {
         icon={<AlertTriangle size={40} aria-hidden="true" />}
         title="Daily limit reached"
         description={error.message}
+      />
+    );
+  }
+
+  // 503 — the upstream provider's own quota is exhausted (Gemini free-tier
+  // RESOURCE_EXHAUSTED, not our own llmRateLimit middleware, which stays a
+  // 429 above). Calmer copy than a generic failure: this isn't a bug, and
+  // retrying immediately won't help — free-tier quotas typically reset daily.
+  if (error.status === 503 && error.code === "llm_quota_exhausted") {
+    return (
+      <EmptyState
+        icon={<CloudOff size={40} aria-hidden="true" />}
+        title="AI quota used up for now"
+        description="The AI provider's free quota is used up for now — try again later (free-tier quotas usually reset daily)."
       />
     );
   }

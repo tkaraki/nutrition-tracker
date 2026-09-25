@@ -1,11 +1,13 @@
 import { apiFetch } from "./client";
-import type { MealPlan, MealPlanRecipe, MealType } from "./types";
+import { NUTRIENT_KEYS } from "../lib/nutrients";
+import type { MealPlan, MealPlanIngredient, MealPlanRecipe, MealType } from "./types";
 
 /**
- * Every id here is a BIGSERIAL/BIGINT and every servings value is NUMERIC —
- * both arrive as strings on read (src/db/pool.ts's type parser comment) but
- * write endpoints (addRecipeToPlan, setRecipeServings) validate z.number().
- * Coerce on every read here so nothing downstream sees a numeric string.
+ * Every id here is a BIGSERIAL/BIGINT and every servings/quantity_g value is
+ * NUMERIC — both arrive as strings on read (src/db/pool.ts's type parser
+ * comment) but write endpoints (addRecipeToPlan, addIngredientToPlan, etc.)
+ * validate z.number(). Coerce on every read here so nothing downstream sees
+ * a numeric string.
  */
 
 interface RawMealPlanRecipe {
@@ -17,6 +19,17 @@ interface RawMealPlanRecipe {
   title?: string;
 }
 
+/** Nutrient columns are `i.<key> * mpi.quantity_g / 100` server-side —
+ *  already numeric-string per-row amounts, same coercion as everywhere else. */
+type RawMealPlanIngredient = {
+  id: number | string;
+  meal_plan_id: number | string;
+  ingredient_id: number | string;
+  quantity_g: number | string;
+  eaten_at: string | null;
+  name: string;
+} & Record<(typeof NUTRIENT_KEYS)[number], number | string>;
+
 interface RawMealPlan {
   id: number | string;
   user_id: number | string;
@@ -24,6 +37,7 @@ interface RawMealPlan {
   meal_type: MealType;
   created_at: string;
   recipes?: RawMealPlanRecipe[];
+  ingredients?: RawMealPlanIngredient[];
 }
 
 function toMealPlanRecipe(raw: RawMealPlanRecipe): MealPlanRecipe {
@@ -37,6 +51,22 @@ function toMealPlanRecipe(raw: RawMealPlanRecipe): MealPlanRecipe {
   };
 }
 
+function toMealPlanIngredient(raw: RawMealPlanIngredient): MealPlanIngredient {
+  const nutrients = Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, Number(raw[key])])) as Record<
+    (typeof NUTRIENT_KEYS)[number],
+    number
+  >;
+  return {
+    ...nutrients,
+    id: Number(raw.id),
+    meal_plan_id: Number(raw.meal_plan_id),
+    ingredient_id: Number(raw.ingredient_id),
+    quantity_g: Number(raw.quantity_g),
+    eaten_at: raw.eaten_at,
+    name: raw.name,
+  };
+}
+
 function toMealPlan(raw: RawMealPlan): MealPlan {
   return {
     id: Number(raw.id),
@@ -45,6 +75,7 @@ function toMealPlan(raw: RawMealPlan): MealPlan {
     meal_type: raw.meal_type,
     created_at: raw.created_at,
     recipes: (raw.recipes ?? []).map(toMealPlanRecipe),
+    ingredients: (raw.ingredients ?? []).map(toMealPlanIngredient),
   };
 }
 
@@ -97,4 +128,38 @@ export function setRecipeEaten(id: number, eaten: boolean): Promise<MealPlanReci
 /** DELETE /api/meal-plan-recipes/:id — removes one recipe from its plan slot. */
 export function removeRecipeFromPlan(id: number): Promise<void> {
   return apiFetch<void>(`/api/meal-plan-recipes/${id}`, { method: "DELETE" });
+}
+
+/** POST /api/meal-plans/:id/ingredients — log an ingredient straight to a plan slot. */
+export function addIngredientToPlan(
+  mealPlanId: number,
+  ingredientId: number,
+  quantityG: number,
+  eaten = false,
+): Promise<MealPlanIngredient> {
+  return apiFetch<RawMealPlanIngredient>(`/api/meal-plans/${mealPlanId}/ingredients`, {
+    method: "POST",
+    body: JSON.stringify({ ingredient_id: ingredientId, quantity_g: quantityG, eaten }),
+  }).then(toMealPlanIngredient);
+}
+
+/** PATCH /api/meal-plan-ingredients/:id — adjust quantity_g and/or mark eaten/not-eaten. */
+export function updateMealPlanIngredient(
+  id: number,
+  updates: { quantity_g?: number; eaten?: boolean },
+): Promise<MealPlanIngredient> {
+  return apiFetch<RawMealPlanIngredient>(`/api/meal-plan-ingredients/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  }).then(toMealPlanIngredient);
+}
+
+/** Convenience wrapper over updateMealPlanIngredient for the eaten/not-eaten toggle. */
+export function setIngredientEaten(id: number, eaten: boolean): Promise<MealPlanIngredient> {
+  return updateMealPlanIngredient(id, { eaten });
+}
+
+/** DELETE /api/meal-plan-ingredients/:id — removes one direct ingredient from its plan slot. */
+export function removeIngredientFromPlan(id: number): Promise<void> {
+  return apiFetch<void>(`/api/meal-plan-ingredients/${id}`, { method: "DELETE" });
 }
