@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { LlmQuotaExhaustedError } from "./llm/errors.js";
 
 /**
  * A known, expected error with an HTTP status attached — thrown deliberately
@@ -55,6 +56,15 @@ export function asyncHandler<Req extends Request = Request>(
 export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction): void {
   if (err instanceof AppError) {
     res.status(err.status).json({ error: err.message, details: err.details });
+    return;
+  }
+
+  if (err instanceof LlmQuotaExhaustedError) {
+    // The upstream provider's own quota, not our app-level llmRateLimit
+    // middleware (which stays a plain 429, thrown before this handler ever
+    // sees a request) — 503 signals "temporarily unavailable, try later"
+    // rather than "you did something wrong".
+    res.status(503).json({ error: err.message, code: "llm_quota_exhausted" });
     return;
   }
 

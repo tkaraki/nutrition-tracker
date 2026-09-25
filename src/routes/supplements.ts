@@ -114,16 +114,24 @@ supplementsRouter.delete(
 // ---------------------------------------------------------------------
 
 const isoDateTime = z.string().datetime({ offset: true }).optional();
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD").optional();
 
 const createLogSchema = z.object({
   supplement_id: z.number().int().positive(),
   doses: z.number().positive().default(1),
   logged_at: isoDateTime, // defaults to now() in SQL when omitted
+  // Day attribution the user chose, independent of logged_at's timestamp
+  // (see log_date column comment). Defaults to the UTC date of logged_at,
+  // which keeps pre-log_date callers behaving the same; the client should
+  // always send its own local date. This is the ad-hoc path only —
+  // routine_item_id isn't accepted here (see supplementRoutine.ts).
+  log_date: isoDate,
 });
 
 const updateLogSchema = z.object({
   doses: z.number().positive().optional(),
   logged_at: isoDateTime,
+  log_date: isoDate,
 });
 
 // GET /api/supplement-logs?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -138,15 +146,15 @@ supplementLogsRouter.get(
       `SELECT sl.*, s.name AS supplement_name
        FROM supplement_logs sl
        JOIN supplements s ON s.id = sl.supplement_id
-       WHERE sl.user_id = $1 AND sl.logged_at::date BETWEEN $2 AND $3
-       ORDER BY sl.logged_at DESC`,
+       WHERE sl.user_id = $1 AND sl.log_date BETWEEN $2 AND $3
+       ORDER BY sl.log_date DESC, sl.logged_at DESC`,
       [userId, from, to],
     );
     res.json(result.rows);
   }),
 );
 
-// POST /api/supplement-logs — log a dose taken
+// POST /api/supplement-logs — log an ad-hoc dose taken (not on the routine)
 supplementLogsRouter.post(
   "/",
   validateBody(createLogSchema),
@@ -161,30 +169,34 @@ supplementLogsRouter.post(
     if (owns.rowCount === 0) throw AppError.notFound("Supplement");
 
     const result = await pool.query(
-      `INSERT INTO supplement_logs (user_id, supplement_id, doses, logged_at)
-       VALUES ($1, $2, $3, COALESCE($4, now())) RETURNING *`,
-      [userId, body.supplement_id, body.doses, body.logged_at ?? null],
+      `INSERT INTO supplement_logs (user_id, supplement_id, doses, logged_at, log_date)
+       VALUES ($1, $2, $3, COALESCE($4, now()), COALESCE($5, (COALESCE($4, now()) AT TIME ZONE 'UTC')::date))
+       RETURNING *`,
+      [userId, body.supplement_id, body.doses, body.logged_at ?? null, body.log_date ?? null],
     );
     res.status(201).json(result.rows[0]);
   }),
 );
 
-// PATCH /api/supplement-logs/:id — correct a mistaken log entry
+// PATCH /api/supplement-logs/:id — correct a mistaken log entry. Moving a
+// routine-linked log onto a date that already has a log for that item hits
+// uq_supplement_logs_routine_day and surfaces as the usual 409 via the
+// existing 23505 mapping.
 supplementLogsRouter.patch(
   "/:id",
   validateBody(updateLogSchema),
   asyncHandler(async (req, res) => {
     const { userId } = req as RequestWithUser;
     const body = req.body as z.infer<typeof updateLogSchema>;
-    if (body.doses === undefined && body.logged_at === undefined) {
+    if (body.doses === undefined && body.logged_at === undefined && body.log_date === undefined) {
       throw new AppError(400, "No fields to update");
     }
 
     const result = await pool.query(
       `UPDATE supplement_logs
-       SET doses = COALESCE($1, doses), logged_at = COALESCE($2, logged_at)
-       WHERE id = $3 AND user_id = $4 RETURNING *`,
-      [body.doses ?? null, body.logged_at ?? null, req.params.id, userId],
+       SET doses = COALESCE($1, doses), logged_at = COALESCE($2, logged_at), log_date = COALESCE($3, log_date)
+       WHERE id = $4 AND user_id = $5 RETURNING *`,
+      [body.doses ?? null, body.logged_at ?? null, body.log_date ?? null, req.params.id, userId],
     );
     const row = result.rows[0];
     if (!row) throw AppError.notFound("Supplement log");

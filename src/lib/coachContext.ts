@@ -47,7 +47,7 @@ export async function buildCoachContext(userId: number, from: string, to: string
       `SELECT s.name, SUM(sl.doses)::float AS total_doses
        FROM supplement_logs sl
        JOIN supplements s ON s.id = sl.supplement_id
-       WHERE sl.user_id = $1 AND (sl.logged_at AT TIME ZONE 'UTC')::date BETWEEN $2 AND $3
+       WHERE sl.user_id = $1 AND sl.log_date BETWEEN $2 AND $3
        GROUP BY s.name ORDER BY total_doses DESC LIMIT 8`,
       [userId, from, to],
     ),

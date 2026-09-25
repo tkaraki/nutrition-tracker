@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { AppError, asyncHandler } from "../lib/errors.js";
 import { fetchRecipeFromUrl } from "../lib/llm/fetchRecipePage.js";
+import { LlmQuotaExhaustedError } from "../lib/llm/errors.js";
 import { getRecipeExtractor } from "../lib/llm/index.js";
 import type { ExtractedIngredient } from "../lib/llm/schema.js";
 import { validateBody } from "../lib/validate.js";
@@ -46,6 +47,22 @@ async function withMatches(ingredients: ExtractedIngredient[]): Promise<DraftIng
   );
 }
 
+// Every extractor call goes through this: previously a raw provider failure
+// (bad JSON, timeout, network error, etc.) had no catch anywhere on this
+// path and fell all the way through to the generic unhandled-error 500 in
+// errors.ts — unlike coach.ts, which already mapped the equivalent failure
+// to a 502. AppError and LlmQuotaExhaustedError are already the right,
+// specific shape, so they pass through untouched.
+async function callExtractor<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (err instanceof AppError || err instanceof LlmQuotaExhaustedError) throw err;
+    console.error("Recipe extraction failed", err);
+    throw new AppError(502, "The extraction model did not return a usable recipe — try again.");
+  }
+}
+
 // POST /api/recipe-imports — parse a recipe from pasted text or a URL into
 // a structured draft. Nothing is written to the database here: this
 // mirrors the "parse → review/edit → confirm" pattern already used
@@ -64,7 +81,7 @@ recipeImportsRouter.post(
     const extractor = getRecipeExtractor();
 
     if (body.source === "text") {
-      const extracted = await extractor.extractRecipe(body.text);
+      const extracted = await callExtractor(() => extractor.extractRecipe(body.text));
       res.json({
         extraction_method: "llm" as const,
         source_url: null,
@@ -84,7 +101,7 @@ recipeImportsRouter.post(
       // lines (already isolated, so a small/cheap call) go through the LLM.
       const ingredients =
         fetched.ingredientLines && fetched.ingredientLines.length > 0
-          ? await extractor.parseIngredientLines(fetched.ingredientLines)
+          ? await callExtractor(() => extractor.parseIngredientLines(fetched.ingredientLines!))
           : [];
       res.json({
         extraction_method: "json-ld" as const,
@@ -100,7 +117,7 @@ recipeImportsRouter.post(
     if (!fetched.rawText) {
       throw new AppError(422, "Could not extract any readable content from that page");
     }
-    const extracted = await extractor.extractRecipe(fetched.rawText);
+    const extracted = await callExtractor(() => extractor.extractRecipe(fetched.rawText!));
     res.json({
       extraction_method: "llm" as const,
       source_url: body.url,

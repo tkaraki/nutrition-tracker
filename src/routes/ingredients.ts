@@ -7,6 +7,14 @@ import { NUTRIENT_KEYS, nutrientFieldsSchema } from "../lib/nutrients.js";
 
 export const ingredientsRouter = Router();
 
+// Known limitation: `ingredients` has no user_id — it's a single shared
+// table, and any authenticated user can list/PATCH/DELETE any row (GET
+// below has no ownership check either). Fine for a single-user or household
+// deploy, since nutrients are computed on read and there's one household's
+// worth of data. Must be revisited (e.g. a created_by_user_id column, or
+// making FDC-sourced rows read-only) before a public multi-user deploy —
+// see "Known limitations" in README.md.
+
 const createIngredientSchema = z.object({
   name: z.string().trim().min(1),
   fdc_id: z.number().int().positive().optional(),

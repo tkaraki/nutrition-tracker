@@ -8,12 +8,13 @@ import { serveClient } from "./middleware/serveClient.js";
 import { authRouter } from "./routes/auth.js";
 import { coachRouter } from "./routes/coach.js";
 import { ingredientsRouter } from "./routes/ingredients.js";
-import { mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
+import { mealPlanIngredientsRouter, mealPlanRecipesRouter, mealPlansRouter } from "./routes/mealPlans.js";
 import { nutrientTargetsRouter } from "./routes/nutrientTargets.js";
 import { nutritionRouter } from "./routes/nutrition.js";
 import { recipeImportsRouter } from "./routes/recipeImports.js";
 import { recipesRouter } from "./routes/recipes.js";
 import { supplementLogsRouter, supplementsRouter } from "./routes/supplements.js";
+import { supplementRoutineRouter } from "./routes/supplementRoutine.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -52,10 +53,12 @@ app.use("/api/ingredients", ingredientsRouter);
 app.use("/api/recipes", recipesRouter);
 app.use("/api/meal-plans", mealPlansRouter);
 app.use("/api/meal-plan-recipes", mealPlanRecipesRouter);
+app.use("/api/meal-plan-ingredients", mealPlanIngredientsRouter);
 app.use("/api/nutrient-targets", nutrientTargetsRouter);
 app.use("/api/nutrition", nutritionRouter);
 app.use("/api/supplements", supplementsRouter);
 app.use("/api/supplement-logs", supplementLogsRouter);
+app.use("/api/supplement-routine", supplementRoutineRouter);
 app.use("/api/recipe-imports", recipeImportsRouter);
 app.use("/api/coach", coachRouter);
 

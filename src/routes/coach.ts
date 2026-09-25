@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { buildCoachContext } from "../lib/coachContext.js";
 import { AppError, asyncHandler } from "../lib/errors.js";
+import { LlmQuotaExhaustedError } from "../lib/llm/errors.js";
 import { getCoachAdvisor, type CoachAdvice, type CoachRecommendation } from "../lib/llm/index.js";
 import { NUTRIENT_KEYS } from "../lib/nutrients.js";
 import { validateBody } from "../lib/validate.js";
@@ -60,7 +61,7 @@ coachRouter.post(
     try {
       advice = await getCoachAdvisor().generateAdvice(context);
     } catch (err) {
-      if (err instanceof AppError) throw err;
+      if (err instanceof AppError || err instanceof LlmQuotaExhaustedError) throw err;
       console.error("Coach advisor failed", err);
       throw new AppError(502, "The coach model did not return usable advice — try again.");
     }

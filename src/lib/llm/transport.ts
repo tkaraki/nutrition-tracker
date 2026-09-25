@@ -1,3 +1,5 @@
+import { LlmQuotaExhaustedError } from "./errors.js";
+
 export interface JsonCallOptions {
   temperature?: number;
   timeoutMs?: number;
@@ -32,6 +34,14 @@ export async function generateJsonGemini(
 
   if (!response.ok) {
     const detail = await response.text();
+    if (response.status === 429) {
+      // Google returns 429/RESOURCE_EXHAUSTED for both per-minute and
+      // per-day free-tier caps — the detail body is logged server-side for
+      // debugging but never forwarded to the client (it can include
+      // account/project identifiers).
+      console.error(`Gemini quota/rate limit hit (429): ${detail.slice(0, 500)}`);
+      throw new LlmQuotaExhaustedError();
+    }
     throw new Error(`Gemini API error (${response.status}): ${detail.slice(0, 500)}`);
   }
 
@@ -77,6 +87,13 @@ export async function generateJsonOllama(
 
   if (!response.ok) {
     const detail = await response.text();
+    if (response.status === 429) {
+      // Ollama itself has no notion of quota, but a proxied/hosted Ollama
+      // endpoint can still rate-limit — treat it the same as Gemini's 429
+      // for parity rather than letting it fall through as a generic error.
+      console.error(`Ollama quota/rate limit hit (429): ${detail.slice(0, 500)}`);
+      throw new LlmQuotaExhaustedError();
+    }
     throw new Error(`Ollama error (${response.status}): ${detail.slice(0, 500)}`);
   }
 
