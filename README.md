@@ -1,85 +1,76 @@
 # Nutrition Tracker
 
-A self-hosted meal planner and nutrition tracker with an AI coach that reasons
-over what you actually ate — not over generic advice.
+A self-hosted web application for meal planning, food and supplement logging,
+and nutrient tracking against daily targets. An LLM-based coach analyzes logged
+intake and produces prioritized recommendations.
 
-You log meals and supplements, the app rolls them into daily and weekly nutrient
-totals, compares those against targets you set, and surfaces the gaps. A coach
-feature then reads your real logged history to make specific recommendations.
+<img src="docs/screenshots/dashboard.png" alt="Dashboard showing daily nutrient totals against targets and a seven-day history">
 
-> **Status: early.** Real multi-user auth (Argon2id password hashing,
-> Postgres-backed sessions) protects a full CRUD + nutrient-aggregation
-> API: ingredients, recipes, meal planning/logging, supplements, and
-> daily/weekly totals vs. personal targets. LLM recipe parsing (text or
-> URL, matched against existing ingredients) and the AI coach (grounded
-> in a user's own logged history and targets) have both shipped. There
-> is no frontend yet — everything so far is exercised via the API
-> directly.
+<table>
+<tr>
+<td width="33%"><img src="docs/screenshots/planner.png" alt="Meal planner with recipes and individual ingredients per meal"></td>
+<td width="33%"><img src="docs/screenshots/supplements.png" alt="Supplement schedule grouped by time of day"></td>
+<td width="33%"><img src="docs/screenshots/library.png" alt="Recipe library"></td>
+<td rowspan="2" width="20%"><img src="docs/screenshots/mobile.png" alt="Mobile layout with bottom navigation"></td>
+</tr>
+<tr>
+<td align="center">Planner</td>
+<td align="center">Supplements</td>
+<td align="center">Library</td>
+</tr>
+</table>
 
-## Planned features
+## Features
 
-- **Recipes** — store recipes with ingredients and quantities
-- **Ingredient nutrition** — a normalized table of calories, macros, fiber, and
-  key micronutrients, sourced from USDA FoodData Central
-- **Meal planning** — assign recipes to days and meal types, and record what was
-  actually eaten versus planned
-- **Supplements** — track supplement products and daily doses through the same
-  nutrient pipeline as food, so totals are unified
-- **Nutrient totals** — daily and weekly aggregation across food *and*
-  supplements, measured against personal targets
-- **LLM recipe parsing** — paste a recipe as text or a URL and get structured
-  ingredients extracted into the database
-- **AI coach** — grounded in the last seven days of your own logged data and
-  your targets, rather than generic nutrition advice
-- **Multi-user** — accounts, sessions, and per-user targets
+- **Dashboard:** daily totals for 11 nutrients against user-defined targets, with a seven-day history.
+- **Meal planner:** recipes and individual ingredients (by weight) assigned to meals; only items marked as eaten count toward totals.
+- **Supplements:** per-dose nutrient content, weekly schedules with optional time slots, and dose tracking.
+- **Library:** recipe and ingredient management; recipes referenced by past logs are archived rather than deleted.
+- **Recipe import:** LLM extraction from a URL or pasted text, followed by a review step that matches each line to a known ingredient.
+- **Coach:** LLM analysis of logged intake against targets over a 3–30 day window.
+- **Accounts:** multi-user, with per-user data isolation.
 
-## Stack
+## Tech stack
 
-| Layer | Choice |
+| Component | Technology |
 |---|---|
-| Runtime | Node.js |
-| API | Express |
-| Database | PostgreSQL |
-| LLM | Ollama (local) or Gemini Flash (hosted) — both to be evaluated |
-| Hosting | Self-hosted, exposed via Tailscale Funnel |
-| Process manager | PM2 |
+| Client | React 19, TypeScript, Vite, TanStack Query, React Router, Tailwind CSS 4 |
+| Server | Node.js, Express 5, TypeScript, Zod |
+| Database | PostgreSQL 17, node-pg-migrate |
+| LLM | Google Gemini |
 
-## Repository conventions
+## Getting started
 
-This repository is **public**. Two rules follow from that, and they are not
-negotiable:
+Requirements: Node.js 20+, PostgreSQL 17.
 
-1. **No secrets are ever committed.** Configuration comes from environment
-   variables. `.env` is gitignored; `.env.example` documents the required keys
-   with placeholder values. A credential pushed here is compromised the moment
-   it lands and must be rotated, not reverted.
-2. **No real personal health data is ever committed.** Actual meal logs,
-   supplement history, and nutrition records live only in a local database.
-   Any fixture or seed data in this repository is synthetic.
+```bash
+createuser nutrition_app --pwprompt
+createdb nutrition_tracker_dev --owner nutrition_app
+
+cp .env.example .env
+npm install
+npm run migrate:up
+npm run dev
+```
+
+The API runs on port 3000 and the client on http://localhost:5173.
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Secret used to sign session cookies |
+| `LLM_PROVIDER` | `gemini` |
+| `GEMINI_API_KEY` | Google AI Studio API key |
+| `GEMINI_MODEL` | Optional. Default: `gemini-3.6-flash` |
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the API and client with live reload |
+| `npm run typecheck` | Type-check the server and client |
+| `npm run build` | Build the server and client for production |
+| `npm start` | Run the production build (`NODE_ENV=production` serves the client) |
+| `npm run migrate:up` / `migrate:down` | Apply or revert database migrations |
 
 ## License
 
 [MIT](LICENSE)
-
-## Local development
-
-```bash
-brew install postgresql@17          # once
-brew services start postgresql@17
-
-cp .env.example .env                # then fill in DATABASE_URL, SESSION_SECRET, etc.
-npm install
-npm run migrate:up
-npm run dev                         # http://localhost:3000/health
-
-# then, to actually use the API:
-curl -X POST http://localhost:3000/api/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"you@example.com","password":"a long passphrase","display_name":"You"}' \
-  -c cookies.txt
-curl http://localhost:3000/api/recipes -b cookies.txt
-curl -X POST http://localhost:3000/api/coach/advice \
-  -H 'Content-Type: application/json' \
-  -d '{"days":7}' \
-  -b cookies.txt
-```
